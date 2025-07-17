@@ -1,0 +1,16 @@
+FROM openjdk:11-jdk-slim
+
+# Instala Python e PySpark
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      python3 \
+      python3-pip && \
+    pip3 install --no-cache pyspark && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY jogodavida_spark_service.py .
+
+# SparkService escuta na porta 65432
+EXPOSE 65432
+ENTRYPOINT ["python3", "jogodavida_spark_service.py"]
