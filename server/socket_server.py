@@ -3,93 +3,70 @@ import threading
 import subprocess
 import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("server.log"), logging.StreamHandler()],
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+MPI_PROCS = 4
+SPARK_HOST = "localhost"
+SPARK_PORT = 65432
+LISTEN_PORT = 65431
 
 
-def run_simulation(mode, powmin, powmax):
-    try:
-        if mode == "mpi":
-            cmd = [
-                "mpirun",
-                "-n",
-                "4",
-                "./jogodavida_openmp_mpi",
-                str(powmin),
-                str(powmax),
-            ]
-        elif mode == "spark":
-            cmd = [
-                "spark-submit",
-                "--master",
-                "local[*]",
-                "jogodavida_spark.py",
-                str(powmin),
-                str(powmax),
-            ]
-        else:
-            return f"ERRO: modo desconhecido '{mode}'. Use 'mpi' ou 'spark'."
+def run_mpi(powmin, powmax):
+    cmd = [
+        "mpirun",
+        "-np",
+        str(MPI_PROCS),
+        "--oversubscribe",
+        "./jogodavida_openmp_mpi",
+        str(powmin),
+        str(powmax),
+    ]
+    logging.info(f"MPI: {' '.join(cmd)}")
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    return r.stdout if r.returncode == 0 else f"ERRO MPI: {r.stderr}"
 
-        logging.info(f"Executando: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        return result.stdout if result.returncode == 0 else f"ERRO: {result.stderr}"
 
-    except Exception as e:
-        return f"EXCEÇÃO: {str(e)}"
+def run_spark(powmin, powmax):
+    with socket.socket() as s:
+        s.connect((SPARK_HOST, SPARK_PORT))
+        s.sendall(f"{powmin},{powmax}".encode())
+        return s.recv(65536).decode()
 
 
 def handle_client(conn, addr):
     try:
+        logging.info(f"[SocketServer] conexão de {addr}")
         data = conn.recv(1024).decode().strip()
-        if not data:
-            return
-
-        parts = [p.strip() for p in data.split(",")]
-        if len(parts) != 3:
-            conn.sendall(
-                b"Formato invalido. Envie: modo,powmin,powmax\nEx: mpi,3,10 ou spark,3,10"
-            )
-            return
-
-        mode, s_powmin, s_powmax = parts
-        try:
-            powmin = int(s_powmin)
-            powmax = int(s_powmax)
-        except ValueError:
-            conn.sendall(b"powmin e powmax devem ser inteiros.\n")
-            return
-
-        if not (3 <= powmin <= powmax <= 20):
-            conn.sendall(
-                b"Valores de pow devem estar entre 3 e 20 e powmin <= powmax.\n"
-            )
-            return
-
-        output = run_simulation(mode, powmin, powmax)
-        conn.sendall(output.encode())
-
+        logging.info(f"[SocketServer] recebeu dados: '{data}'")
+        mode, smin, smax = map(str.strip, data.split(","))
+        logging.info(f"[SocketServer] modo={mode}, powmin={smin}, powmax={smax}")
+        logging.info(f"Conexão de {addr}")
+        mode, smin, smax = map(str.strip, data.split(","))
+        powmin, powmax = int(smin), int(smax)
+        if mode == "mpi":
+            result = run_mpi(powmin, powmax)
+        elif mode == "spark":
+            result = run_spark(powmin, powmax)
+        else:
+            result = f"Modo desconhecido '{mode}'. Use mpi ou spark.\n"
+        conn.sendall(result.encode())
     except Exception as e:
-        logging.error(f"Erro ao atender {addr}: {e}")
+        logging.error(f"{addr} erro: {e}")
+        conn.sendall(f"ERRO interno: {e}\n".encode())
     finally:
         conn.close()
 
 
-def start_server(host="0.0.0.0", port=65432):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((host, port))
-        s.listen()
-        logging.info(f"Servidor pronto em {host}:{port}")
-
-        while True:
-            conn, addr = s.accept()
-            threading.Thread(
-                target=handle_client, args=(conn, addr), daemon=True
-            ).start()
+def main():
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("0.0.0.0", LISTEN_PORT))
+    sock.listen()
+    logging.info(f"[SocketServer] ouvindo em 0.0.0.0:{LISTEN_PORT}")
+    while True:
+        conn, addr = sock.accept()
+        threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
 
 
 if __name__ == "__main__":
-    start_server()
+    main()
