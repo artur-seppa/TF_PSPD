@@ -1,16 +1,23 @@
-FROM openjdk:11-jdk-slim
+FROM python:3.9-slim
 
-# Instala Python e PySpark
+# Instalar Java 17
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      python3 \
-      python3-pip && \
-    pip3 install --no-cache pyspark && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y openjdk-17-jdk curl && \
+    apt-get clean
 
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Instalar Spark
+ENV SPARK_VERSION=3.4.1
+RUN curl -L https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz | \
+    tar -xz -C /opt/
+ENV SPARK_HOME=/opt/spark-${SPARK_VERSION}-bin-hadoop3
+ENV PATH=$SPARK_HOME/bin:$PATH
+
+# Instalar dependências Python
+COPY jogodavida_spark_service.py /app/
 WORKDIR /app
-COPY jogodavida_spark_service.py .
+RUN pip install pyspark
 
-# SparkService escuta na porta 65432
-EXPOSE 65432
-ENTRYPOINT ["python3", "jogodavida_spark_service.py"]
+CMD ["python", "jogodavida_spark_service.py"]

@@ -6,14 +6,17 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 MPI_PROCS = 4
-SPARK_HOST = "localhost"
+SPARK_HOST = "spark-engine-service"
 SPARK_PORT = 65432
-LISTEN_PORT = 65431
+
+MPI_HOST = "openmp-engine-service"
+MPI_PORT = 65433
 
 
 def run_mpi(powmin, powmax):
     cmd = [
         "mpirun",
+        "--allow-run-as-root",  # < -- permite a execução como root
         "-np",
         str(MPI_PROCS),
         "--oversubscribe",
