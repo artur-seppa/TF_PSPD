@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-engine
+  labels:
+    app: spark-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-engine
+  template:
+    metadata:
+      labels:
+        app: spark-engine
+    spec:
+      containers:
+        - name: spark-engine
+          image: pedroblome/pspd_trabalho:spark
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 65432
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "500m"

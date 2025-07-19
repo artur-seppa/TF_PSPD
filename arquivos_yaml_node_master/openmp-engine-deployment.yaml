@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openmp-engine
+  labels:
+    app: openmp-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openmp-engine
+  template:
+    metadata:
+      labels:
+        app: openmp-engine
+    spec:
+      containers:
+        - name: openmp-engine
+          image: pedroblome/pspd_trabalho:openmp
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 65433
+          env:
+            - name: OMPI_ALLOW_RUN_AS_ROOT
+              value: "1"
+            - name: OMPI_ALLOW_RUN_AS_ROOT_CONFIRM
+              value: "1"
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "500m"
+
