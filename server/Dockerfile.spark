@@ -1,23 +1,22 @@
 FROM python:3.9-slim
 
-# Instalar Java 17
-RUN apt-get update && \
-    apt-get install -y openjdk-17-jdk curl && \
-    apt-get clean
+# Instala Java 17 e dependências
+RUN apt-get update && apt-get install -y openjdk-17-jdk openjdk-17-jre-headless curl bash && apt-get clean
 
+# Define variáveis de ambiente
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV PATH=$JAVA_HOME/bin:$PATH
+ENV PATH="$JAVA_HOME/bin:$PATH"
+ENV PYSPARK_PYTHON=python3
+ENV PYSPARK_DRIVER_PYTHON=python3
 
-# Instalar Spark
-ENV SPARK_VERSION=3.4.1
-RUN curl -L https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz | \
-    tar -xz -C /opt/
-ENV SPARK_HOME=/opt/spark-${SPARK_VERSION}-bin-hadoop3
-ENV PATH=$SPARK_HOME/bin:$PATH
+# Configura o Java como padrão
+RUN update-alternatives --install /usr/bin/java java $JAVA_HOME/bin/java 1 && \
+    update-alternatives --set java $JAVA_HOME/bin/java && \
+    pip install pyspark==3.4.1
 
-# Instalar dependências Python
+# Copia o código da aplicação
 COPY jogodavida_spark_service.py /app/
 WORKDIR /app
-RUN pip install pyspark
 
-CMD ["python", "jogodavida_spark_service.py"]
+# Executa o serviço
+CMD ["python3", "jogodavida_spark_service.py"]
