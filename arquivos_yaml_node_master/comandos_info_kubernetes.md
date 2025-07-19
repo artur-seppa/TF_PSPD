@@ -102,7 +102,3 @@ Os arquivos YAML definem como cada recurso (Pod, Service, Deployment, etc.) ser�
 
 - **socket-server-service.yaml:**  
   Expõe o socket-server para o mundo externo via NodePort, permitindo testes e integração.
-
-
-analisando  logs de execução de cada pod em live:
-
