@@ -8,6 +8,7 @@ COPY socket_server.py .
 # Instala kubectl e dependências básicas
 RUN apt-get update && \
     pip install --no-cache-dir kubernetes && \
+    pip install elasticsearch && \
     apt-get install -y curl gnupg ca-certificates && \
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \

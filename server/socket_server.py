@@ -5,12 +5,34 @@ import logging
 import uuid
 import tempfile
 import os
+from elasticsearch import Elasticsearch
 
 # ===== CONFIGURAÇÕES =====
 LISTEN_PORT = 65431
 MPI_PROCS = 4
 SPARK_HOST = "spark-engine-service"
 SPARK_PORT = 65432
+
+
+ELASTIC_URL = "http://elasticsearch.monitoring.svc.cluster.local:9200"
+ELASTIC_USER = "elastic"
+ELASTIC_PASS = "changeme"
+
+es = Elasticsearch([ELASTIC_URL], basic_auth=(ELASTIC_USER, ELASTIC_PASS))
+
+
+def log_to_elastic(event, data):
+    try:
+        doc = {
+            "event": event,
+            "data": data,
+            "host": os.environ.get("HOSTNAME"),
+            "uuid": str(uuid.uuid4()),
+        }
+        es.index(index="socket-logs", document=doc)
+    except Exception as e:
+        logging.error(f"Falha ao enviar log ao Elasticsearch: {e}")
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [SocketServer] %(message)s")
 
