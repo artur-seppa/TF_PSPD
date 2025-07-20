@@ -1,4 +1,4 @@
-# Jogo da vida - Aplicando sistemas distruidos e escaláveis
+# Jogo da vida - Aplicando sistemas distribuidos e escaláveis
 
 ## Cluster Kubernetes no Rancher
 
